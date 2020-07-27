@@ -52,18 +52,9 @@ def process_ans(message):
 def create_socket(addr, port, name):
     # Инициализация сокета и обмен
     m = Message()
-    text = input("Сообщение: ")
     transport = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     transport.connect((addr, port))
     message_to_server = create_presence(name)
-    m.send(transport, message_to_server)
-    try:
-        answer = process_ans(m.get(transport))
-        print(answer)
-    except (ValueError, json.JSONDecodeError):
-        print("Не удалось декодировать сообщение сервера.")
-    message_to_server = create_message(name, text)
-    print(message_to_server)
     m.send(transport, message_to_server)
     try:
         answer = process_ans(m.get(transport))

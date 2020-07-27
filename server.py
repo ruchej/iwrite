@@ -18,7 +18,7 @@ def client_message_handler(message):
         and message[s.ACTION] == s.PRESENCE
         and s.TIME in message
         and s.USER in message
-        and message[s.USER][s.ACCOUNT_NAME] == "Guest"
+        and message[s.USER][s.ACCOUNT_NAME] != ""
     ):
         return {s.RESPONSE: 200}
     return {s.RESPONSE: 400, s.ERROR: "Bad Request"}
@@ -35,9 +35,14 @@ def create_socket(addr, port):
     transport.listen(s.MAX_CONNECTIONS)
 
     while True:
-        print("Слушаю")
-        client, client_address = transport.accept()
+        print("The server listens\nPress CTRL + C to stop the server")
         try:
+            client, client_address = transport.accept()
+        except KeyboardInterrupt:
+            print('\nThe server is stopped')
+            sys.exit(1)
+        try:
+            print(client, client_address)
             message_from_client = message.get(client)
             print(message_from_client)
             # {'action': 'presence', 'time': 1573760672.167031, 'user': {'account_name': 'Guest'}}
