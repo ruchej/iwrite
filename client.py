@@ -61,3 +61,45 @@ def create_socket(addr, port, name):
         print(answer)
     except (ValueError, json.JSONDecodeError):
         print("Не удалось декодировать сообщение сервера.")
+
+
+def main():
+    """Загружаем параметы коммандной строки"""
+    # client.py 192.168.1.2 8079
+
+    try:
+        if "-p" in sys.argv:
+            server_port = int(sys.argv[sys.argv.index("-p") + 1])
+        else:
+            server_port = s.DEFAULT_PORT
+        if server_port < 1024 or server_port > 65535:
+            raise ValueError
+    except IndexError:
+        print("После параметра -'p' необходимо указать номер порта.")
+        sys.exit(1)
+    except ValueError:
+        print(
+            "В качастве порта может быть указано только число в диапазоне от 1024 до 65535."
+        )
+        sys.exit(1)
+    # Затем загружаем какой адрес слушать
+    try:
+        if "-a" in sys.argv:
+            server_address = sys.argv[sys.argv.index("-a") + 1]
+        else:
+            server_address = s.DEFAULT_IP_ADDRESS
+
+    except IndexError:
+        print(
+            "После параметра 'a'- необходимо указать адрес, который будет слушать сервер."
+        )
+        sys.exit(1)
+    if "-n" in sys.argv:
+        name = sys.argv[sys.argv.index("-n") + 1]
+    else:
+        name = "Guest"
+    create_socket(server_address, server_port, name)
+
+
+if __name__ == "__main__":
+    main()
