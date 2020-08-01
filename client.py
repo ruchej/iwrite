@@ -1,14 +1,16 @@
 """Программа-клиент"""
 
-import sys
 import json
 import socket
+import sys
 import time
-import settings as s
 
+import settings as s
+from decorators import Log
 from message import Message
 
 
+@Log()
 def create_presence(account_name="Guest"):
     """
     Функция генерирует запрос о присутствии клиента
@@ -24,6 +26,7 @@ def create_presence(account_name="Guest"):
     return out
 
 
+@Log()
 def create_message(account_name="Guest", msg=""):
 
     out = {
@@ -36,6 +39,7 @@ def create_message(account_name="Guest", msg=""):
     return out
 
 
+@Log()
 def process_ans(message):
     """
     Функция разбирает ответ сервера
@@ -49,6 +53,7 @@ def process_ans(message):
     raise ValueError
 
 
+@Log()
 def create_socket(addr, port, name):
     # Инициализация сокета и обмен
     m = Message()
@@ -63,6 +68,7 @@ def create_socket(addr, port, name):
         print("Не удалось декодировать сообщение сервера.")
 
 
+@Log()
 def main():
     """Загружаем параметы коммандной строки"""
     # client.py 192.168.1.2 8079

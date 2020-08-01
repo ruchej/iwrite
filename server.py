@@ -4,12 +4,14 @@ import socket
 import sys
 
 import settings as s
+from decorators import Log
 from logger import server_logger
 from message import Message
 
 LOG = logging.getLogger("server")
 
 
+@Log()
 def client_message_handler(message):
     """
     Message handler from clients, accepts dictionary -
@@ -17,7 +19,7 @@ def client_message_handler(message):
     returns the response dictionary for the client
 
     """
-    LOG.debug(f'Разбираем сообщение: {message}')
+    LOG.debug(f"Разбираем сообщение: {message}")
     if (
         s.ACTION in message
         and message[s.ACTION] == s.PRESENCE
@@ -29,23 +31,26 @@ def client_message_handler(message):
     return {s.RESPONSE: 400, s.ERROR: "Bad Request"}
 
 
+@Log()
 def create_socket(addr, port):
 
     message = Message()
     # Готовим сокет
 
     transport = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    LOG.info(f'Подключаемся к адресу: {addr}: {port}')
+    LOG.info(f"Подключаемся к адресу: {addr}: {port}")
     transport.bind((addr, port))
     # Слушаем порт
     transport.listen(s.MAX_CONNECTIONS)
 
     while True:
-        LOG.info(f"The server listens {addr}: {port}\nPress CTRL + C to stop the server\n")
+        LOG.info(
+            f"The server listens {addr}: {port}\nPress CTRL + C to stop the server\n"
+        )
         try:
             client, client_address = transport.accept()
         except KeyboardInterrupt:
-            print('\nThe server is stopped')
+            print("\nThe server is stopped")
             client.close()
             sys.exit(1)
         try:
@@ -63,6 +68,7 @@ def create_socket(addr, port):
         client.close()
 
 
+@Log()
 def main():
     """
         Загрузка параметров командной строки, если нет параметров, то задаём значения по умоланию.
