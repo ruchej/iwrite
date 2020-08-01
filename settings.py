@@ -1,3 +1,7 @@
+import os
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Порт по умолчанию для сетевого ваимодействия
 DEFAULT_PORT = 7777
 # IP адрес по умолчанию для подключения клиента
@@ -22,3 +26,4 @@ MESSAGE = "message"
 PRESENCE = "presence"
 RESPONSE = "response"
 ERROR = "error"
+LOG_DIR = os.path.join(BASE_DIR, "log")

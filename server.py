@@ -1,9 +1,13 @@
 import json
+import logging
 import socket
 import sys
 
 import settings as s
+from logger import server_logger
 from message import Message
+
+LOG = logging.getLogger("server")
 
 
 def client_message_handler(message):
@@ -13,6 +17,7 @@ def client_message_handler(message):
     returns the response dictionary for the client
 
     """
+    LOG.debug(f'Разбираем сообщение: {message}')
     if (
         s.ACTION in message
         and message[s.ACTION] == s.PRESENCE
@@ -30,12 +35,13 @@ def create_socket(addr, port):
     # Готовим сокет
 
     transport = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    LOG.info(f'Подключаемся к адресу: {addr}: {port}')
     transport.bind((addr, port))
     # Слушаем порт
     transport.listen(s.MAX_CONNECTIONS)
 
     while True:
-        print(f"The server listens {addr}: {port}\nPress CTRL + C to stop the server\n")
+        LOG.info(f"The server listens {addr}: {port}\nPress CTRL + C to stop the server\n")
         try:
             client, client_address = transport.accept()
         except KeyboardInterrupt:
