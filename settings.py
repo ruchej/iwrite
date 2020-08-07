@@ -1,6 +1,5 @@
 import os
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Порт по умолчанию для сетевого ваимодействия
 DEFAULT_PORT = 7777
@@ -14,16 +13,17 @@ MAX_PACKAGE_LENGTH = 1024
 ENCODING = "utf-8"
 
 # Прококол JIM основные ключи:
-ACTION = "action"
-TIME = "time"
-USER = "user"
-ACCOUNT_NAME = "account_name"
-TO = "to"
-FROM = "from"
-MESSAGE = "message"
+KEY_ACTION = "action"
+KEY_TIME = "time"
+KEY_USER = "user"
+KEY_ACCOUNT_NAME = "account_name"
+KEY_TO = "to"
+KEY_FROM = "from"
+KEY_MESSAGE = "message"
+KEY_RESPONSE = "response"
+KEY_ERROR = "error"
 
-# Прочие ключи, используемые в протоколе
-PRESENCE = "presence"
-RESPONSE = "response"
-ERROR = "error"
+ACTION_MESSAGE = "msg"
+ACTION_PRESENCE = "presence"
+
 LOG_DIR = os.path.join(BASE_DIR, "log")
