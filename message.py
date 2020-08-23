@@ -1,9 +1,11 @@
 import json
 
+from decorators import Log
 from settings import ENCODING, MAX_PACKAGE_LENGTH
 
 
 class Message:
+    @Log()
     def get(self, client):
         """
         Method of receiving and decoding a message
@@ -19,6 +21,7 @@ class Message:
             raise ValueError
         raise ValueError
 
+    @Log()
     def send(self, sock, message):
         """
         Method of message encoding and sending

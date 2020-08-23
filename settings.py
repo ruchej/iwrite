@@ -23,7 +23,17 @@ KEY_MESSAGE = "message"
 KEY_RESPONSE = "response"
 KEY_ERROR = "error"
 
+ACTION_EXIT = "exit"
 ACTION_MESSAGE = "msg"
 ACTION_PRESENCE = "presence"
 
 LOG_DIR = os.path.join(BASE_DIR, "log")
+
+# Словари - ответы:
+# 200
+RESPONSE_200 = {KEY_RESPONSE: 200}
+# 400
+RESPONSE_400 = {
+    KEY_RESPONSE: 400,
+    KEY_ERROR: None
+}
