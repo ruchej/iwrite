@@ -43,7 +43,7 @@ class ClientMaker(type):
         for command in ("accept", "listen", "socket"):
             if command in methods:
                 raise TypeError("В классе обнаружено использование запрещённого метода")
-        if "get_message" in methods or "send_message" in methods:
+        if "MSG" in methods:
             pass
         else:
             raise TypeError("Отсутствуют вызовы функций, работающих с сокетами.")

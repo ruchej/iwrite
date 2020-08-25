@@ -11,19 +11,12 @@ import time
 import settings as s
 from decorators import Log
 from logger import client_logger
+from errors import IncorrectDataRecivedError, ReqFieldMissingError, ServerError
 from message import Message
+from metaclasses import ClientMaker
 
 LOG = logging.getLogger("client")
-
-
-@Log()
-def exit_message(account_name):
-    """Функция создаёт словарь с сообщением о выходе"""
-    return {
-        s.KEY_ACTION: s.ACTION_EXIT,
-        s.KEY_TIME: time.time(),
-        s.KEY_ACCOUNT_NAME: account_name,
-    }
+MSG = Message()
 
 
 @Log()
@@ -51,41 +44,105 @@ def arg_parser():
     return server_address, server_port, name
 
 
-@Log()
-def message_from_server(sock, user_name):
-    """Функция - обработчик сообщений других пользователей, поступающих с сервера"""
-    msg = Message()
-    while True:
-        try:
-            message = msg.get(sock)
-            if (
-                s.KEY_ACTION in message
-                and message[s.KEY_ACTION] == s.ACTION_MESSAGE
-                and s.KEY_FROM in message
-                and s.KEY_TO in message
-                and s.KEY_MESSAGE in message
-                and message[s.KEY_TO] == user_name
-            ):
-                print(
-                    f"\nПолучено сообщение от пользователя "
-                    f"{message[s.KEY_FROM]}:\n{message[s.KEY_MESSAGE]}"
-                )
-                LOG.info(
-                    f"Получено сообщение от пользователя "
-                    f"{message[s.KEY_FROM]}:\n{message[s.KEY_MESSAGE]}"
-                )
-            else:
-                LOG.error(f"Получено некорректное сообщение с сервера: {message}")
+class ClientSender(threading.Thread, metaclass=ClientMaker):
+    def __init__(self, account_name, sock):
+        self.account_name = account_name
+        self.sock = sock
+        super().__init__()
 
-        except (
-            OSError,
-            ConnectionError,
-            ConnectionAbortedError,
-            ConnectionResetError,
-            json.JSONDecodeError,
-        ):
-            LOG.critical(f"Потеряно соединение с сервером.")
-            break
+    def create_exit_message(self):
+        """Функция создаёт словарь с сообщением о выходе"""
+        return {
+            s.KEY_ACTION: s.ACTION_EXIT,
+            s.KEY_TIME: time.time(),
+            s.KEY_ACCOUNT_NAME: self.account_name,
+        }
+
+    def create_message(self):
+        to = input("Введите получателя сообщения: ")
+        message = input("Введите сообщение для отправки: ")
+        message_dict = {
+            s.KEY_ACTION: s.ACTION_MESSAGE,
+            s.KEY_FROM: self.account_name,
+            s.KEY_TO: to,
+            s.KEY_TIME: time.time(),
+            s.KEY_MESSAGE: message,
+        }
+        LOG.debug(f"Сформирован словарь сообщения: {message_dict}")
+        try:
+            MSG.send(self.sock, message_dict)
+            LOG.info(f"Отправлено сообщение для пользователя {to}")
+        except:
+            LOG.critical("Потеряно соединение с сервером.")
+            exit(1)
+
+    def run(self):
+        def _exit():
+            try:
+                MSG.send(self.sock, self.create_exit_message())
+            except:
+                pass
+            print("Завершение соединения.")
+            LOG.info("Завершение работы по команде пользователя.")
+            time.sleep(0.5)
+            # break
+
+        self.print_help()
+        funcs = {
+            "/msg": [
+                self.create_message,
+                " - отправить сообщение. Кому и текст будет запрошены отдельно.",
+            ],
+            "/help": [self.print_help, " - вывести подсказки по командам"],
+            "/exit": [_exit, " - выход из программы"],
+        }
+        while True:
+            command = input("Команда:")
+            func = funcs[command][0]
+            func(funcs)
+
+    def print_help(self, funcs):
+        for i in funcs:
+            print(f"{i} {funcs[i][1]}")
+
+
+class ClientReader(threading.Thread, metaclass=ClientMaker):
+    def __init__(self, account_name, sock):
+        self.account_name = account_name
+        self.sock = sock
+        super().__init__()
+
+    def run(self):
+        while True:
+            try:
+                message = MSG.get(self.sock)
+                if (
+                    s.KEY_ACTION in message
+                    and message[s.KEY_ACTION] == s.ACTION_MESSAGE
+                    and s.KEY_FROM in message
+                    and s.KEY_TO in message
+                    and s.ACTION_MESSAGE in message
+                    and message[s.KEY_TO] == self.account_name
+                ):
+                    print(
+                        f"\nПолучено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.ACTION_MESSAGE]}"
+                    )
+                    LOG.info(
+                        f"Получено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.ACTION_MESSAGE]}"
+                    )
+                else:
+                    LOG.error(f"Получено некорректное сообщение с сервера: {message}")
+            except IncorrectDataRecivedError:
+                LOG.error(f"Не удалось декодировать полученное сообщение.")
+            except (
+                OSError,
+                ConnectionError,
+                ConnectionAbortedError,
+                ConnectionResetError,
+                json.JSONDecodeError,
+            ):
+                LOG.critical(f"Потеряно соединение с сервером.")
+                break
 
 
 @Log()
@@ -103,54 +160,6 @@ def create_presence(account_name="Guest"):
 
 
 @Log()
-def create_message(sock, account_name="Guest"):
-    """Функция запрашивает текст сообщения и возвращает его.
-    Так же завершает работу при вводе подобной комманды
-    """
-    msg = Message()
-    to_user = input("Введите получателя сообщения: ")
-    message = input("Введите сообщение для отправки: ")
-    message_dict = {
-        s.KEY_ACTION: s.ACTION_MESSAGE,
-        s.KEY_FROM: account_name,
-        s.KEY_TO: to_user,
-        s.KEY_TIME: time.time(),
-        s.KEY_MESSAGE: message,
-    }
-    LOG.debug(f"Сформирован словарь сообщения: {message_dict}")
-    try:
-        msg.send(sock, message_dict)
-        LOG.info(f"Отправлено сообщение для пользователя {to_user}")
-    except:
-        LOG.critical("Потеряно соединение с сервером")
-        sys.exit(1)
-
-
-@Log()
-def user_interactive(sock, username):
-    """Функция взаимодействия с пользователем, запрашивает команды, отправляет сообщения"""
-    msg = Message()
-    print_help()
-    while True:
-        command = input("Введите команду: ")
-        if command == "message":
-            create_message(sock, username)
-        elif command == "help":
-            print_help()
-        elif command == "exit":
-            msg.send(sock, exit_message(username))
-            print("Завершение соединения.")
-            LOG.info("Завершение работы по команде пользователя.")
-            # Задержка неоходима, чтобы успело уйти сообщение о выходе
-            time.sleep(0.5)
-            break
-        else:
-            print(
-                "Команда не распознана, попробойте снова. help - вывести поддерживаемые команды."
-            )
-
-
-@Log()
 def process_ans(message):
     """
     Функция разбирает ответ сервера
@@ -163,72 +172,65 @@ def process_ans(message):
     raise ValueError
 
 
-@Log()
-def create_socket(server_address, server_port, client_name):
-    # Инициализация сокета и обмен
-    msg = Message()
+def main():
+    print("Консольный месседжер. Клиентский модуль.")
+
+    # Загружаем параметы коммандной строки
+    server_address, server_port, client_name = arg_parser()
+
     # Если имя пользователя не было задано, необходимо запросить пользователя.
     if not client_name:
         client_name = input("Введите имя пользователя: ")
+    else:
+        print(f"Клиентский модуль запущен с именем: {client_name}")
 
     LOG.info(
-        f"Запущен клиент с парамертами: адрес сервера: {server_address}, "
-        f"порт: {server_port}, имя пользователя: {client_name}"
+        f"Запущен клиент с парамертами: адрес сервера: {server_address} , порт: {server_port}, имя пользователя: {client_name}"
     )
+
+    # Инициализация сокета и сообщение серверу о нашем появлении
     try:
         transport = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         transport.connect((server_address, server_port))
-        message_to_server = create_presence(client_name)
-        msg.send(transport, message_to_server)
-        answer = process_ans(msg.get(transport))
+        MSG.send(transport, create_presence(client_name))
+        answer = process_ans(MSG.get(transport))
         LOG.info(f"Установлено соединение с сервером. Ответ сервера: {answer}")
         print(f"Установлено соединение с сервером.")
-    except (ValueError, json.JSONDecodeError):
-        print("Не удалось декодировать сообщение сервера.")
-
-    else:
-        # Если соединение с сервером установлено корректно,
-        # запускаем клиенский процесс приёма сообщний
-        receiver = threading.Thread(
-            target=message_from_server, args=(transport, client_name)
+    except json.JSONDecodeError:
+        LOG.error("Не удалось декодировать полученную Json строку.")
+        exit(1)
+    except ServerError as error:
+        LOG.error(f"При установке соединения сервер вернул ошибку: {error.text}")
+        exit(1)
+    except ReqFieldMissingError as missing_error:
+        LOG.error(
+            f"В ответе сервера отсутствует необходимое поле {missing_error.missing_field}"
         )
-        receiver.daemon = True
-        receiver.start()
+        exit(1)
+    except (ConnectionRefusedError, ConnectionError):
+        LOG.critical(
+            f"Не удалось подключиться к серверу {server_address}:{server_port}, конечный компьютер отверг запрос на подключение."
+        )
+        exit(1)
+    else:
+        # Если соединение с сервером установлено корректно, запускаем клиенский процесс приёма сообщний
+        module_reciver = ClientReader(client_name, transport)
+        module_reciver.daemon = True
+        module_reciver.start()
 
         # затем запускаем отправку сообщений и взаимодействие с пользователем.
-        user_interface = threading.Thread(
-            target=user_interactive, args=(transport, client_name)
-        )
-        user_interface.daemon = True
-        user_interface.start()
+        module_sender = ClientSender(client_name, transport)
+        module_sender.daemon = True
+        module_sender.start()
         LOG.debug("Запущены процессы")
 
-        # Watchdog основной цикл, если один из потоков завершён,
-        # то значит или потеряно соединение или пользователь
-        # ввёл exit. Поскольку все события обработываются в потоках,
-        # достаточно просто завершить цикл.
+        # Watchdog основной цикл, если один из потоков завершён, то значит или потеряно соединение или пользователь
+        # ввёл exit. Поскольку все события обработываются в потоках, достаточно просто завершить цикл.
         while True:
             time.sleep(1)
-            if receiver.is_alive() and user_interface.is_alive():
+            if module_reciver.is_alive() and module_sender.is_alive():
                 continue
             break
-
-
-def print_help():
-    """Функция выводящяя справку по использованию"""
-    print("Поддерживаемые команды:")
-    print("message - отправить сообщение. Кому и текст будет запрошены отдельно.")
-    print("help - вывести подсказки по командам")
-    print("exit - выход из программы")
-
-
-@Log()
-def main():
-    """Сообщаем о запуске"""
-    print("Консольный месседжер. Клиентский модуль.")
-
-    server_address, server_port, name = arg_parser()
-    create_socket(server_address, server_port, name)
 
 
 if __name__ == "__main__":
