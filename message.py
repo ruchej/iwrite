@@ -5,7 +5,7 @@ from settings import ENCODING, MAX_PACKAGE_LENGTH
 
 
 class Message:
-    @Log()
+    # @Log()
     def get(self, client):
         """
         Method of receiving and decoding a message

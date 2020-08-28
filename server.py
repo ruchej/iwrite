@@ -20,8 +20,8 @@ MSG = Message()
 def arg_parse():
     """Парсер аргументов командной строки"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", default=s.DEFAULT_IP_ADDRESS, type=str, nargs="?")
     parser.add_argument("-p", default=s.DEFAULT_PORT, type=int, nargs="?")
+    parser.add_argument("-a", default="", type=str, nargs="?")
     namespace = parser.parse_args(sys.argv[1:])
     listen_addr = namespace.a
     listen_port = namespace.p
