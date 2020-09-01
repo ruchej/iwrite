@@ -138,7 +138,7 @@ class Server(metaclass=ServerMaker):
         ):
             if message[s.KEY_USER][s.KEY_ACCOUNT_NAME] not in self.names.keys():
                 self.names[message[s.KEY_USER][s.KEY_ACCOUNT_NAME]] = client
-                MSG.send(client, {s.RESPONSE_200})
+                MSG.send(client, s.RESPONSE_200)
             else:
                 response = s.RESPONSE_400
                 response[s.KEY_ERROR] = "Имя пользователя уже занято."

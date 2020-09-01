@@ -44,6 +44,11 @@ def arg_parser():
     return server_address, server_port, name
 
 
+def print_help(funcs):
+    for i in funcs:
+        print(f"{i} {funcs[i][1]}")
+
+
 class ClientSender(threading.Thread, metaclass=ClientMaker):
     def __init__(self, account_name, sock):
         self.account_name = account_name
@@ -85,25 +90,24 @@ class ClientSender(threading.Thread, metaclass=ClientMaker):
             print("Завершение соединения.")
             LOG.info("Завершение работы по команде пользователя.")
             time.sleep(0.5)
-            # break
+            exit(1)
 
-        self.print_help()
+        def _print_help():
+            print_help(funcs)
+
         funcs = {
             "/msg": [
                 self.create_message,
                 " - отправить сообщение. Кому и текст будет запрошены отдельно.",
             ],
-            "/help": [self.print_help, " - вывести подсказки по командам"],
-            "/exit": [_exit, " - выход из программы"],
+            "/?": [_print_help, " - вывести подсказки по командам"],
+            "/e": [_exit, " - выход из программы"],
         }
+        print_help(funcs)
         while True:
             command = input("Команда:")
             func = funcs[command][0]
-            func(funcs)
-
-    def print_help(self, funcs):
-        for i in funcs:
-            print(f"{i} {funcs[i][1]}")
+            func()
 
 
 class ClientReader(threading.Thread, metaclass=ClientMaker):
@@ -121,14 +125,14 @@ class ClientReader(threading.Thread, metaclass=ClientMaker):
                     and message[s.KEY_ACTION] == s.ACTION_MESSAGE
                     and s.KEY_FROM in message
                     and s.KEY_TO in message
-                    and s.ACTION_MESSAGE in message
+                    and s.KEY_MESSAGE in message
                     and message[s.KEY_TO] == self.account_name
                 ):
                     print(
-                        f"\nПолучено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.ACTION_MESSAGE]}"
+                        f"\nПолучено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.KEY_MESSAGE]}"
                     )
                     LOG.info(
-                        f"Получено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.ACTION_MESSAGE]}"
+                        f"Получено сообщение от пользователя {message[s.KEY_FROM]}:\n{message[s.KEY_MESSAGE]}"
                     )
                 else:
                     LOG.error(f"Получено некорректное сообщение с сервера: {message}")
@@ -146,7 +150,7 @@ class ClientReader(threading.Thread, metaclass=ClientMaker):
 
 
 @Log()
-def create_presence(account_name="Guest"):
+def create_presence(account_name):
     """Функция генерирует запрос о присутствии клиента"""
     out = {
         s.KEY_ACTION: s.ACTION_PRESENCE,

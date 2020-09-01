@@ -20,7 +20,6 @@ KEY_ACCOUNT_NAME = "account_name"
 KEY_TO = "to"
 KEY_FROM = "from"
 KEY_MESSAGE = "message"
-KEY_MESSAGE_TXT = "mess_text"
 KEY_RESPONSE = "response"
 KEY_ERROR = "error"
 
